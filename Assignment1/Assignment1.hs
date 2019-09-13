@@ -75,7 +75,12 @@ module Main where
     
     select :: Field -> Field -> Table -> Table
     select column value table@(header:rows)
-        = undefined
+        = case columnindex of
+            Nothing -> table
+            Just index_table -> filter (\x -> check x) rows where check x = (x !! index_table) == value
+            where columnindex = elemIndex column header
+
+
     
     -- * Exercise 8
     
