@@ -62,10 +62,12 @@ module Main where
     printTable :: Table -> [String]
     printTable table@(header:rows)
         = line ++ header' header ++ line ++ body' rows ++ line
-        where header' xs = [printRow (zip col_width (map (map toUpper) xs))] 
-              body' ys = map (printRow . zip col_width) ys
+        where header' xs = [printRow' ((map . map) toUpper xs)] 
+              body' ys = map printRow' ys
+              printRow' = printRow . zip col_width
               col_width = columnWidths table
               line = [printLine col_width]
+
     
     -- | Querying
     
