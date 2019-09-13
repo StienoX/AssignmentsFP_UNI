@@ -26,7 +26,7 @@ module Main where
              . parseTable
     
     -- | Parsing
-    
+
     -- * Exercise 1
     
     parseTable :: [String] -> Table
@@ -39,8 +39,9 @@ module Main where
     printLine :: [Int] -> String
     --printLine [] = "+"
     --printLine (x:xs) = "+" ++ replicate x '-' ++ printLine xs
-    printLine xs = foldr mkstr "+" xs
-        where mkstr y ys = ('+' : replicate y '-') ++ ys
+    --printLine = foldr mkstr "+"
+    --    where mkstr y ys = ('+' : replicate y '-') ++ ys
+    printLine = foldr (\x -> (++) ('+' : replicate x '-')) ([] ++ "+")
     
     
         -- * Exercise 3
@@ -60,10 +61,11 @@ module Main where
     -- * Exercise 6
     
     printTable :: Table -> [String]
+    printTable [] = []
     printTable table@(header:rows)
         = line ++ header' header ++ line ++ body' rows ++ line
         where header' xs = [printRow' ((map . map) toUpper xs)] 
-              body' ys = map printRow' ys
+              body' = map printRow'
               printRow' = printRow . zip col_width
               col_width = columnWidths table
               line = [printLine col_width]
@@ -77,15 +79,15 @@ module Main where
     select column value table@(header:rows)
         = case columnIndex of
             Nothing -> table
-            Just index_table -> filter (\x -> check x) rows where check x = (x !! index_table) == value
+            Just index_table -> filter check rows where check x = (x !! index_table) == value
             where columnIndex = elemIndex column header
 
 
     
     -- * Exercise 8
-    
+
     project :: [Field] -> Table -> Table
     project columns table@(header:_)
         = map getColumn (mapMaybe columnIndex columns) 
-        where getColumn index = (transpose table) !! index
+        where getColumn index = transpose table !! index
               columnIndex column = elemIndex column header
