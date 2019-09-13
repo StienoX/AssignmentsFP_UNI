@@ -40,27 +40,30 @@ module Main where
     --printLine [] = "+"
     --printLine (x:xs) = "+" ++ replicate x '-' ++ printLine xs
     printLine xs = foldr mkstr "+" xs
-        where mkstr x xs = ('+' : replicate x '-') ++ xs
+        where mkstr y ys = ('+' : replicate y '-') ++ ys
     
     
         -- * Exercise 3
     printField :: Int -> String -> String
-    printField = undefined
+    printField n x | all isDigit x = replicate (n - length x) ' ' ++ x
+                   | otherwise = x ++ replicate (n - length x) ' '
     -- * Exercise 4
                    
     printRow :: [(Int, String)] -> String
-    printRow = undefined
+    printRow x = "|" ++ intercalate "|" (map (uncurry printField) x) ++ "|"
     
     -- * Exercise 5
     
     columnWidths :: Table -> [Int]
-    columnWidths = undefined
+    columnWidths x = map (maximum . map length) (transpose x)
     
     -- * Exercise 6
     
     printTable :: Table -> [String]
     printTable table@(header:rows)
-        = undefined
+        = header' (columnWidths table) header ++ body' (columnWidths table) rows
+        where header' ns xs = [printLine ns] ++ [printRow (zip ns (map (map toUpper) xs))] 
+              body' ns ys = [printLine ns] ++ map (printRow . zip ns) ys ++ [printLine ns]
     
     -- | Querying
     
