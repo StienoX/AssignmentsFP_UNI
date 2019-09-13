@@ -75,10 +75,10 @@ module Main where
     
     select :: Field -> Field -> Table -> Table
     select column value table@(header:rows)
-        = case columnindex of
+        = case columnIndex of
             Nothing -> table
             Just index_table -> filter (\x -> check x) rows where check x = (x !! index_table) == value
-            where columnindex = elemIndex column header
+            where columnIndex = elemIndex column header
 
 
     
@@ -86,4 +86,6 @@ module Main where
     
     project :: [Field] -> Table -> Table
     project columns table@(header:_)
-        = undefined
+        = map getColumn (mapMaybe columnIndex columns) 
+        where getColumn index = (transpose table) !! index
+              columnIndex column = elemIndex column header
