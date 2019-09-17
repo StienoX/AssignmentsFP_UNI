@@ -76,6 +76,7 @@ module Main where
     -- * Exercise 7
     
     select :: Field -> Field -> Table -> Table
+    select _ _ [] = []
     select column value table@(header:rows)
         = case columnIndex of
             Nothing -> table
@@ -87,6 +88,7 @@ module Main where
     -- * Exercise 8
 
     project :: [Field] -> Table -> Table
+    project _ [] = []
     project columns table@(header:_)
         = transpose(map getColumn (mapMaybe columnIndex columns)) 
         where getColumn index = transpose table !! index
