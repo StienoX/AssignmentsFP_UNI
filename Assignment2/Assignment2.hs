@@ -27,18 +27,20 @@ data Rose a = MkRose a [Rose a]
 -- Exercise 1
 
 root :: Rose a -> a
-root = undefined
+root (MkRose a _) = a
 
 children :: Rose a -> [Rose a]
-children = undefined
+children (MkRose _ xs) = xs
 
 -- Exercise 2
 
 size :: Rose a -> Int
-size = undefined
+size (MkRose _ []) = 1
+size (MkRose _ xs) = 1 + sum (map size xs)
 
 leaves :: Rose a -> Int
-leaves = undefined
+leaves (MkRose _ []) = 1
+leaves (MkRose _ xs) = sum (map size xs)
 
 -- | State representation
 
@@ -54,7 +56,8 @@ instance Show Player where
 -- Exercise 3
  
 nextPlayer :: Player -> Player
-nextPlayer = undefined
+nextPlayer P1 = P2
+nextPlayer P2 = P1
 
 -- * Board
 
@@ -69,7 +72,9 @@ instance Show Field where
 -- Exercise 4
 
 symbol :: Player -> Field
-symbol = undefined
+symbol (P1) = X
+symbol (P2) = O
+
 
 type Row   = (Field, Field, Field)
 type Board = (Row, Row, Row)
@@ -77,34 +82,61 @@ type Board = (Row, Row, Row)
 -- Exercise 5
 
 verticals :: Board -> (Row, Row, Row)
-verticals = undefined
+verticals ((a0,a1,a2),(b0,b1,b2),(c0,c1,c2)) = ((a0,b0,c0),(a1,b1,c1),(a2,b2,c2)) --Transposes Board
 
 diagonals :: Board -> (Row, Row)
-diagonals = undefined
+diagonals ((a0,_,a2),(_,b1,_),(c0,_,c2)) = ((a0,b1,c2),(a2,b1,c0))
 
 -- Exercise 6
 
 emptyBoard :: Board
-emptyBoard = undefined
+emptyBoard = ((B,B,B),(B,B,B),(B,B,B))
 
 -- Exercise 7
 
 printBoard :: Board -> String
-printBoard = undefined
+printBoard (a,b,c) = mk a ++ ln ++ mk b ++ ln ++ mk c
+  where mk (a,b,c) = show a ++ "|" ++ show b ++ "|" ++ show c ++ "\n"
+        ln = "-+-+-\n"
 
 -- | Move generation
-          
+convert :: Board -> [Field]
+convert ((a,b,c),(d,e,f),(g,h,i)) = [a,b,c,d,e,f,g,h,i]          
 -- Exercise 8
           
 moves :: Player -> Board -> [Board]
-moves = undefined
+moves player brd = mapMaybe check (brds brd)
+  where brds ((a,b,c),(d,e,f),(g,h,i)) = [((s,b,c),(d,e,f),(g,h,i)) , ((a,s,c),(d,e,f),(g,h,i)) , ((a,b,s),(d,e,f),(g,h,i)) , ((a,b,c),(s,e,f),(g,h,i)) , ((a,b,c),(d,s,f),(g,h,i)) , ((a,b,c),(d,e,s),(g,h,i)) , ((a,b,c),(d,e,f),(s,h,i)) , ((a,b,c),(d,e,f),(g,s,i)) , ((a,b,c),(d,e,f),(g,h,s))]
+        s = symbol player
+        count :: Board -> Int
+        count lbrd = length (filter (==B) (convert lbrd))
+        c_b = count brd
+        check :: Board -> Maybe Board 
+        check nbrd | c_b > count nbrd = Just nbrd
+                   | otherwise = Nothing
+
 
 -- | Gametree generation
 
 -- Exercise 9
 
 hasWinner :: Board -> Maybe Player
-hasWinner = undefined
+hasWinner brd = case (map check [verticals brd, to3 (diagonals brd) , brd]) of
+                  [Nothing,Nothing,Nothing] -> Nothing
+                  [Just x, Nothing, Nothing] -> toPlayer x
+                  [Nothing, Just x, Nothing] -> toPlayer x
+                  [Nothing, Nothing, Just x] -> toPlayer x
+  where check :: (Row, Row, Row) -> Maybe Field
+        check ((a0,a1,a2),(b0,b1,b2),(c0,c1,c2)) | a0 == a1 && a1 == a2 && not(a2 == B) = Just a0
+                                                 | b0 == b1 && b1 == b2 && not(a2 == B) = Just b0
+                                                 | c0 == c1 && c1 == c2 && not(a2 == B) = Just c0
+                                                 | otherwise = Nothing
+        to3 :: (Row, Row) -> (Row,Row,Row)
+        to3 (x,y) = (x,y,(B,B,B))
+        toPlayer :: Field -> Player
+        toPlayer X = P1
+        toPlayer O = P2
+                           
 
 -- Exercise 10
 
