@@ -72,8 +72,8 @@ instance Show Field where
 -- Exercise 4
 
 symbol :: Player -> Field
-symbol (P1) = X
-symbol (P2) = O
+symbol P1 = X
+symbol P2 = O
 
 
 type Row   = (Field, Field, Field)
@@ -106,7 +106,16 @@ convert ((a,b,c),(d,e,f),(g,h,i)) = [a,b,c,d,e,f,g,h,i]
           
 moves :: Player -> Board -> [Board]
 moves player brd = mapMaybe check (brds brd)
-  where brds ((a,b,c),(d,e,f),(g,h,i)) = [((s,b,c),(d,e,f),(g,h,i)) , ((a,s,c),(d,e,f),(g,h,i)) , ((a,b,s),(d,e,f),(g,h,i)) , ((a,b,c),(s,e,f),(g,h,i)) , ((a,b,c),(d,s,f),(g,h,i)) , ((a,b,c),(d,e,s),(g,h,i)) , ((a,b,c),(d,e,f),(s,h,i)) , ((a,b,c),(d,e,f),(g,s,i)) , ((a,b,c),(d,e,f),(g,h,s))]
+  where brds ((a,b,c),(d,e,f),(g,h,i)) = [
+             ((s,b,c),(d,e,f),(g,h,i)),
+             ((a,s,c),(d,e,f),(g,h,i)),
+             ((a,b,s),(d,e,f),(g,h,i)),
+             ((a,b,c),(s,e,f),(g,h,i)),
+             ((a,b,c),(d,s,f),(g,h,i)),
+             ((a,b,c),(d,e,s),(g,h,i)),
+             ((a,b,c),(d,e,f),(s,h,i)),
+             ((a,b,c),(d,e,f),(g,s,i)),
+             ((a,b,c),(d,e,f),(g,h,s))]
         s = symbol player
         count :: Board -> Int
         count lbrd = length (filter (==B) (convert lbrd))
@@ -121,27 +130,34 @@ moves player brd = mapMaybe check (brds brd)
 -- Exercise 9
 
 hasWinner :: Board -> Maybe Player
-hasWinner brd = case (map check [verticals brd, to3 (diagonals brd) , brd]) of
-                  [Nothing,Nothing,Nothing] -> Nothing
-                  [Just x, Nothing, Nothing] -> toPlayer x
-                  [Nothing, Just x, Nothing] -> toPlayer x
-                  [Nothing, Nothing, Just x] -> toPlayer x
-  where check :: (Row, Row, Row) -> Maybe Field
-        check ((a0,a1,a2),(b0,b1,b2),(c0,c1,c2)) | a0 == a1 && a1 == a2 && not(a2 == B) = Just a0
-                                                 | b0 == b1 && b1 == b2 && not(a2 == B) = Just b0
-                                                 | c0 == c1 && c1 == c2 && not(a2 == B) = Just c0
-                                                 | otherwise = Nothing
+hasWinner brd | isJust horzbrd = horzbrd
+              | isJust diagbrd = diagbrd
+              | isJust vertbrd = vertbrd
+              | otherwise = Nothing
+
+  where check :: (Row, Row, Row) -> Maybe Player
+        check (a,b,c) | isJust(check' a) = check' a 
+                      | isJust(check' b) = check' b
+                      | isJust(check' c) = check' c
+                      | otherwise = Nothing
+
+            where check' :: (Field, Field, Field) -> Maybe Player
+                  check' (X,X,X) = Just P1
+                  check' (O,O,O) = Just P2
+                  check' _       = Nothing 
+
         to3 :: (Row, Row) -> (Row,Row,Row)
         to3 (x,y) = (x,y,(B,B,B))
-        toPlayer :: Field -> Player
-        toPlayer X = P1
-        toPlayer O = P2
+        diagbrd = check (to3 (diagonals brd))
+        vertbrd = check (verticals brd)
+        horzbrd = check brd
                            
 
 -- Exercise 10
 
 gameTree :: Player -> Board -> Rose Board
-gameTree = undefined
+gameTree player brd | isJust(hasWinner brd) = MkRose brd [] --make leave
+                    | otherwise = MkRose brd (map (gameTree (nextPlayer player)) (moves player brd))-- recursive moves
 
 -- | Game complexity
 
