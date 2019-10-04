@@ -40,7 +40,7 @@ size (MkRose _ xs) = 1 + sum (map size xs)
 
 leaves :: Rose a -> Int
 leaves (MkRose _ []) = 1
-leaves (MkRose _ xs) = sum (map size xs)
+leaves (MkRose _ xs) = sum (map leaves xs)
 
 -- | State representation
 
@@ -130,65 +130,96 @@ moves player brd = mapMaybe check (brds brd)
 -- Exercise 9
 
 hasWinner :: Board -> Maybe Player
-hasWinner brd | isJust horzbrd = horzbrd
-              | isJust diagbrd = diagbrd
-              | isJust vertbrd = vertbrd
-              | otherwise = Nothing
+hasWinner brd = getWinner (concat [diagbrd, vertbrd, horzbrd])
+  where check :: (Row, Row, Row) -> [Player]
+        check (a,b,c) = mapMaybe check' [a,b,c]
 
-  where check :: (Row, Row, Row) -> Maybe Player
-        check (a,b,c) | isJust(check' a) = check' a 
-                      | isJust(check' b) = check' b
-                      | isJust(check' c) = check' c
-                      | otherwise = Nothing
+        checkDiag :: (Row, Row) -> [Player]
+        checkDiag (a,b) = mapMaybe check' [a,b]
 
-            where check' :: (Field, Field, Field) -> Maybe Player
-                  check' (X,X,X) = Just P1
-                  check' (O,O,O) = Just P2
-                  check' _       = Nothing 
+        check' :: (Field, Field, Field) -> Maybe Player
+        check' (X,X,X) = Just P1
+        check' (O,O,O) = Just P2
+        check' _       = Nothing 
 
-        to3 :: (Row, Row) -> (Row,Row,Row)
-        to3 (x,y) = (x,y,(B,B,B))
-        diagbrd = check (to3 (diagonals brd))
+        diagbrd = checkDiag (diagonals brd)
         vertbrd = check (verticals brd)
         horzbrd = check brd
-                           
 
+        getWinner :: [Player] -> Maybe Player
+        getWinner [] = Nothing
+        getWinner (x:_) = Just x
 -- Exercise 10
 
 gameTree :: Player -> Board -> Rose Board
-gameTree player brd | isJust(hasWinner brd) = MkRose brd [] --make leave
-                    | otherwise = MkRose brd (map (gameTree (nextPlayer player)) (moves player brd))-- recursive moves
+gameTree player brd = case hasWinner brd of
+    Nothing -> MkRose brd (map (gameTree (nextPlayer player)) (moves player brd))-- recursive moves
+    Just _  -> MkRose brd [] --make leave
 
 -- | Game complexity
 
 -- Exercise 11
 
 gameTreeComplexity :: Int
-gameTreeComplexity = undefined
-
+gameTreeComplexity = leaves (gameTree P1 emptyBoard)
 -- | Minimax
 
 -- Exercise 12
 
 minimax :: Player -> Rose Board -> Rose Int
-minimax = undefined
+minimax player x = minimax' player x
+  where minimax' :: Player -> Rose Board -> Rose Int
+        minimax' curPlayer (MkRose brd []) = MkRose (getValue player (hasWinner brd)) []
+        minimax' curPlayer (MkRose _ brds) | player == curPlayer = generateRose maximum'
+                                           | otherwise = generateRose minimum'
+            where generateRose f = MkRose (f (map root (getIntRoses curPlayer brds))) (getIntRoses curPlayer brds)
+                  getIntRoses :: Player -> [Rose Board] -> [Rose Int]
+                  getIntRoses curPlayer = map (minimax' (nextPlayer curPlayer))
+
+        getValue :: Player -> Maybe Player -> Int 
+        getValue player winner = case winner of
+            Nothing -> 0
+            Just winner -> match winner player
+        match :: Player -> Player -> Int
+        match winner player | winner == player = 1
+                            | otherwise = -1
+
 
 -- * Lazier minimum and maximums
 
 -- Exercise 13
 
 minimum' :: [Int] -> Int
-minimum' = undefined
-
+minimum' (-1:_) = -1
+minimum' (x:y:xs) | x <= y    = minimum' (x:xs)
+                  | otherwise = minimum' (y:xs)
+minimum'  [x]     = x
+minimum' [] = 0
 maximum' :: [Int] -> Int
-maximum' = undefined
+maximum' (1:_) = 1
+maximum' (x:y:xs) | x >= y    = maximum' (x:xs)
+                  | otherwise = maximum' (y:xs)
+maximum' [x]      = x
+maximum' [] = 0
+                  
 
 -- | Gameplay
 
 -- Exercise 14
 
 makeMove :: Player -> Board -> Maybe Board
-makeMove = undefined
+makeMove player brd = getOptimalMove avaibleMoves
+    where avaibleMoves :: [Rose Board] 
+          avaibleMoves = children (gameTree player brd)
+          combine :: Rose Board -> (Board, Rose Int)
+          combine move = (root move, minimax (nextPlayer player) move)
+          getOptimalMove :: [Rose Board] -> Maybe Board
+          getOptimalMove [] = Nothing
+          getOptimalMove (x:xs) = Just (first (foldl compare' (combine x) (map combine xs)))
+            where compare' :: (Board, Rose Int) -> (Board, Rose Int) -> (Board, Rose Int)
+                  compare' (a,b) (c,d) | root b <= root d = (a,b)
+                                       | otherwise = (c,d)
+                  first (x,_) = x
 
 -- | Main
 
