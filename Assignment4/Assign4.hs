@@ -60,7 +60,7 @@ instance Foldable [] where
 
 instance Foldable Rose where
     fold (MkRose x []) = x <> mempty
-    fold (MkRose x xs) = foldr ((<>) . fold) x xs
+    fold (MkRose x xs) = foldl (<>) x (map fold xs)
 
 -- * Exercise 5
 
@@ -130,20 +130,26 @@ data HandCategory
     
 sameSuits :: Hand -> Bool
 sameSuits Hand {unHand = []} = False
-sameSuits Hand {unHand = card:cards} = all (==card) cards
+sameSuits Hand {unHand = card:cards} = all (==suit card) (map suit cards)
+
 
 -- * Exercise 10
 
 isStraight :: [Rank] -> Maybe Rank
 isStraight [] = Nothing
-isStraight (x:xs) = isStraight' xs (x,0)
+isStraight rt@(r:rs) = isStraight' (getRest sort') (getLowest sort' ,0)
   where isStraight' :: [Rank] -> (Rank,Int) -> Maybe Rank
-        isStraight' _ (y,4)       = Just y
-        isStraight' [] _          = Nothing
+        isStraight' _       (y,4) = Just y
         isStraight' (R2:xs) (A,n) = isStraight' xs (R2,n+1)
         isStraight' (R2:xs) (_,n) = isStraight' xs (R2,0)
-        isStraight' (x:xs) (y,n)  | x == succ y = isStraight' xs (x,n+1)
+        isStraight' (x:xs)  (A,n) = isStraight' xs (x,0)
+        isStraight' (x:xs)  (y,n) | x == succ y = isStraight' xs (x,n+1)
                                   | otherwise   = isStraight' xs (x,0)
+        isStraight' []       _    = Nothing
+        sort'                     | r == A                 = [A] ++ reverse rt
+                                  | otherwise              = reverse rt
+        getLowest   (x:_)         = x
+        getRest     (_:xs)        = xs
 
 
 -- * Exercise 11
@@ -165,21 +171,21 @@ order h = reverse (sort (order' (ranks h) []))
   -- * Exercise 13
 
 handCategory :: Hand -> HandCategory
-handCategory Hand {unHand = []} = undefined --Empty hand is not defined..
+handCategory Hand {unHand = []} = error "Empty hand is not defined" --Empty hand is not defined..
 handCategory hand = getHC
   where getHC | sS && getB' iS = StraightFlush (getV' iS)
               | 4 `elem` sets = FourOfAKind (getRank 0) (getRank 1)
-              | 3 `elem` sets && 2 `elem` sets = FullHouse (getRank 0) (getRank 1)
+              | 3 `elem` sets && length o == 2 = FullHouse (getRank 0) (getRank 1)
               | sS = Flush r
               | getB' iS = Straight (getV' iS)
               | 3 `elem` sets = ThreeOfAKind (getRank 0) (getRank 1) (getRank 2)
-              | 2 `elem` sets && 2 `elem` sets = TwoPair (getRank 0) (getRank 1) (getRank 2)
+              | 2 `elem` sets && length o == 3 = TwoPair (getRank 0) (getRank 1) (getRank 2)
               | 2 `elem` sets = OnePair (getRank 0) (filter (/=getRank 0) r)
               | otherwise = HighCard r
         sS = sameSuits hand
         o  = order hand
         r  = ranks hand
-        iS = case isStraight (reverse r) of
+        iS = case isStraight r of
                   Nothing -> (False,R2)
                   Just x  -> (True,x) 
         getV' (_,x) = x
