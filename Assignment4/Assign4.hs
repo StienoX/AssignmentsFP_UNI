@@ -60,7 +60,7 @@ instance Foldable [] where
 
 instance Foldable Rose where
     fold (MkRose x []) = x <> mempty
-    fold (MkRose x xs) = foldr (<>) x (map fold xs)
+    fold (MkRose x xs) = foldr ((<>) . fold) x xs
 
 -- * Exercise 5
 
@@ -99,14 +99,14 @@ data Card = Card { rank :: Rank, suit :: Suit }
 -- * Exercise 7
 
 instance Show Card where
-    show (Card { rank = r, suit = s }) = show r ++ show s
+    show Card { rank = r, suit = s } = show r ++ show s
 
 type Deck = [Card]
 
 -- * Exercise 8
 
 mkDeck :: [Rank] -> [Suit] -> [Card]
-mkDeck xs ys= [Card {rank = x, suit = y} | x <- xs, y <- ys]
+mkDeck xs ys = [Card {rank = x, suit = y} | x <- xs, y <- ys]
 
 fullDeck, piquetDeck :: Deck
 fullDeck   = mkDeck [R2 ..] [S ..C]
@@ -138,12 +138,12 @@ isStraight :: [Rank] -> Maybe Rank
 isStraight [] = Nothing
 isStraight (x:xs) = isStraight' xs (x,0)
   where isStraight' :: [Rank] -> (Rank,Int) -> Maybe Rank
-        isStraight' _ (y,4) = (Just y)
-        isStraight' [] _ = Nothing
+        isStraight' _ (y,4)       = Just y
+        isStraight' [] _          = Nothing
         isStraight' (R2:xs) (A,n) = isStraight' xs (R2,n+1)
         isStraight' (R2:xs) (_,n) = isStraight' xs (R2,0)
-        isStraight' (x:xs) (y,n) | x == (succ y) = isStraight' xs (x,n+1)
-                                 | otherwise = isStraight' xs (x,0)
+        isStraight' (x:xs) (y,n)  | x == succ y = isStraight' xs (x,n+1)
+                                  | otherwise   = isStraight' xs (x,0)
 
 
 -- * Exercise 11
@@ -154,34 +154,62 @@ ranks Hand {unHand = cards} = reverse (sort (map rank cards))
 -- * Exercise 12
 
 order :: Hand -> [(Int, Rank)]
-order h = (map rank (unHand h))
-  where getRank (_,x) = x
-        
+order h = reverse (sort (order' (ranks h) []))
+  where order' :: [Rank] -> [(Int, Rank)] -> [(Int, Rank)]
+        order' (x:xs) [] = order' xs [(1,x)]
+        order' [] t = t
+        order' (x:xs) t@((n,y):ys) | x == y    = order' xs ((n + 1,y) : ys)
+                                   | otherwise = order' xs ((1    ,x) : t)
 
--- * Exercise 13
+
+  -- * Exercise 13
 
 handCategory :: Hand -> HandCategory
-handCategory = undefined
+handCategory Hand {unHand = []} = undefined --Empty hand is not defined..
+handCategory hand = getHC
+  where getHC | sS && getB' iS = StraightFlush (getV' iS)
+              | 4 `elem` sets = FourOfAKind (getRank 0) (getRank 1)
+              | 3 `elem` sets && 2 `elem` sets = FullHouse (getRank 0) (getRank 1)
+              | sS = Flush r
+              | getB' iS = Straight (getV' iS)
+              | 3 `elem` sets = ThreeOfAKind (getRank 0) (getRank 1) (getRank 2)
+              | 2 `elem` sets && 2 `elem` sets = TwoPair (getRank 0) (getRank 1) (getRank 2)
+              | 2 `elem` sets = OnePair (getRank 0) (filter (/=getRank 0) r)
+              | otherwise = HighCard r
+        sS = sameSuits hand
+        o  = order hand
+        r  = ranks hand
+        iS = case isStraight (reverse r) of
+                  Nothing -> (False,R2)
+                  Just x  -> (True,x) 
+        getV' (_,x) = x
+        getB' (x,_) = x
+        sets        = map getB' o
+        getRank n   = getV' (o !! n)
+
+
 
 -- * Exercise 14
 
 instance Ord Hand where
-    compare = undefined
+    compare a b = compare (handCategory a) (handCategory b)
 
 -- * Exercise 15
 
 combs :: Int -> [a] -> [[a]]
-combs = undefined
+combs 0 _      = [[]] 
+combs _ []     = []
+combs n (x:xs) = [ x:ys | ys <- combs (n-1) xs ] ++ combs n xs   
 
 -- * Exercise 16
 
 allHands :: Deck -> [Hand]
-allHands = undefined
+allHands deck = map Hand (combs 5 deck)
 
 -- * Exercise 17
 
 distinctHands :: Deck -> Set Hand
-distinctHands = undefined
+distinctHands deck = foldl (flip insert) empty (allHands deck)
 
 -- * Question 1
 
