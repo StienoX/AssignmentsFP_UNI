@@ -137,12 +137,12 @@ sameSuits Hand {unHand = card:cards} = all (==suit card) (map suit cards)
 
 isStraight :: [Rank] -> Maybe Rank
 isStraight [] = Nothing
-isStraight rt@(r:rs) = isStraight' (getRest sort') (getLowest sort' ,0)
+isStraight rt@(r:_) = isStraight' (getRest sort') (getLowest sort' ,0)
   where isStraight' :: [Rank] -> (Rank,Int) -> Maybe Rank
         isStraight' _       (y,4) = Just y
         isStraight' (R2:xs) (A,n) = isStraight' xs (R2,n+1)
-        isStraight' (R2:xs) (_,n) = isStraight' xs (R2,0)
-        isStraight' (x:xs)  (A,n) = isStraight' xs (x,0)
+        isStraight' (R2:xs) (_,_) = isStraight' xs (R2,0)
+        isStraight' (x:xs)  (A,_) = isStraight' xs (x,0)
         isStraight' (x:xs)  (y,n) | x == succ y = isStraight' xs (x,n+1)
                                   | otherwise   = isStraight' xs (x,0)
         isStraight' []       _    = Nothing
